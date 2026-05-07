@@ -1,0 +1,690 @@
+{
+  "$schema": "https://json-structure.org/meta/core/v0/#",
+  "$id": "https://raw.githubusercontent.com/api-evangelist/lapis/refs/heads/main/json-structure/lapis-document-structure.json",
+  "name": "LapisDocument",
+  "description": "JSON Schema describing the in-memory model of a LAPIS document. LAPIS itself is an indentation-based, function-signature text format; this schema captures the canonical JSON shape produced when a LAPIS document is parsed by tooling. It mirrors the seven sections defined in spec.en.md sections 5-11 ([meta], [types], [ops], [webhooks], [errors], [limits], [flows]).",
+  "type": "object",
+  "required": [
+    "meta",
+    "ops"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "lapisVersion": {
+      "type": "string",
+      "description": "Version of the LAPIS specification this document targets, taken from the optional first-line comment '# LAPIS vX.Y.Z'.",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "examples": [
+        "0.1.0"
+      ]
+    },
+    "meta": {
+      "type": "object",
+      "description": "Required [meta] section: API metadata in key/value form.",
+      "required": [
+        "api",
+        "base"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "api": {
+          "type": "string",
+          "description": "Human-readable API name."
+        },
+        "base": {
+          "type": "uri",
+          "description": "Base URL with no trailing slash."
+        },
+        "version": {
+          "type": "string",
+          "description": "API version string."
+        },
+        "desc": {
+          "type": "string",
+          "description": "Single-line API description."
+        },
+        "auth": {
+          "type": "object",
+          "description": "Authentication descriptor parsed from the compact 'auth: <type> [location:name]' syntax.",
+          "required": [
+            "type"
+          ],
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "bearer",
+                "apikey",
+                "basic",
+                "oauth2",
+                "none"
+              ]
+            },
+            "location": {
+              "type": "string",
+              "enum": [
+                "header",
+                "query"
+              ]
+            },
+            "name": {
+              "type": "string",
+              "description": "Header or query parameter name carrying the credential."
+            },
+            "tokenUrl": {
+              "type": "uri",
+              "description": "OAuth2 token URL when type is oauth2."
+            }
+          }
+        },
+        "format": {
+          "type": "string",
+          "enum": [
+            "json",
+            "xml"
+          ],
+          "default": "json"
+        }
+      }
+    },
+    "types": {
+      "type": "object",
+      "description": "Optional [types] section: a map of type name to either an enumeration or an object type definition.",
+      "additionalProperties": {
+        "$ref": "#/$defs/typeDefinition"
+      }
+    },
+    "ops": {
+      "type": "array",
+      "description": "Required [ops] section: ordered list of API operations.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/operation"
+      }
+    },
+    "webhooks": {
+      "type": "array",
+      "description": "Optional [webhooks] section: events the API pushes to consumer endpoints.",
+      "items": {
+        "$ref": "#/$defs/webhook"
+      }
+    },
+    "errors": {
+      "type": "array",
+      "description": "Optional [errors] section: error catalog declared once and applied globally or scoped via @ops.",
+      "items": {
+        "$ref": "#/$defs/errorDefinition"
+      }
+    },
+    "limits": {
+      "$ref": "#/$defs/limits"
+    },
+    "flows": {
+      "type": "array",
+      "description": "Optional [flows] section: multi-step workflows linking operations.",
+      "items": {
+        "$ref": "#/$defs/flow"
+      }
+    }
+  },
+  "definitions": {
+    "typeExpression": {
+      "type": "string",
+      "description": "Type expression following the LAPIS grammar. Scalars (str, int, float, bool, date, datetime, file, any), references to user-defined types, '[T]' for arrays, '{str:T}' for maps, '{field: T, field?: T}' for inline objects, and 'T?' for nullable.",
+      "examples": [
+        "str",
+        "int",
+        "[Invoice]",
+        "{str:any}",
+        "InvoiceStatus",
+        "Address?"
+      ],
+      "name": "typeExpression"
+    },
+    "typeDefinition": {
+      "oneOf": [
+        {
+          "name": "EnumDefinition",
+          "type": "object",
+          "required": [
+            "kind",
+            "values"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "enum"
+            },
+            "values": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1
+            }
+          }
+        },
+        {
+          "name": "ObjectDefinition",
+          "type": "object",
+          "required": [
+            "kind",
+            "fields"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "object"
+            },
+            "fields": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/field"
+              }
+            }
+          }
+        }
+      ],
+      "name": "typeDefinition"
+    },
+    "field": {
+      "type": "object",
+      "required": [
+        "name",
+        "type"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "type": {
+          "$ref": "#/$defs/typeExpression"
+        },
+        "optional": {
+          "type": "boolean",
+          "default": false,
+          "description": "True when the field name carried a trailing '?' (e.g., 'metadata?: {str:any}')."
+        },
+        "default": {
+          "description": "Default value declared with '= value'.",
+          "type": [
+            "string",
+            "number",
+            "boolean",
+            "null"
+          ]
+        },
+        "since": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+$",
+          "description": "Value of the @since:X.Y annotation."
+        },
+        "deprecated": {
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string",
+              "description": "Optional quoted note following @deprecated."
+            }
+          ]
+        },
+        "location": {
+          "type": "string",
+          "enum": [
+            "query",
+            "header",
+            "path",
+            "body"
+          ],
+          "description": "Explicit @query, @header, @path, or @body annotation."
+        },
+        "headerName": {
+          "type": "string",
+          "description": "Header name from @header:Name annotation on a webhook output field."
+        }
+      },
+      "name": "field"
+    },
+    "operation": {
+      "type": "object",
+      "required": [
+        "name",
+        "method",
+        "path"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "snake_case operation identifier."
+        },
+        "method": {
+          "type": "string",
+          "enum": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE"
+          ]
+        },
+        "path": {
+          "type": "string",
+          "description": "Path relative to meta.base, with path parameters in {braces}."
+        },
+        "description": {
+          "type": "string",
+          "description": "Single indented description line beneath the operation header."
+        },
+        "modifiers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "enum": [
+                  "paginated",
+                  "deprecated",
+                  "idempotent",
+                  "stream"
+                ]
+              },
+              "note": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "since": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+$"
+        },
+        "inputs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/field"
+          }
+        },
+        "outputs": {
+          "type": "array",
+          "description": "Output fields (lines beginning with '<'). May be a single direct type reference or a list of fields.",
+          "items": {
+            "$ref": "#/$defs/outputField"
+          }
+        }
+      },
+      "name": "operation"
+    },
+    "outputField": {
+      "oneOf": [
+        {
+          "name": "DirectTypeReference",
+          "type": "object",
+          "required": [
+            "typeRef"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "typeRef": {
+              "$ref": "#/$defs/typeExpression",
+              "description": "When the output line is a single type reference such as '< Invoice' or '< [Invoice]'."
+            }
+          }
+        },
+        {
+          "$ref": "#/$defs/field"
+        }
+      ],
+      "name": "outputField"
+    },
+    "webhook": {
+      "type": "object",
+      "required": [
+        "name",
+        "method",
+        "path"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "method": {
+          "type": "string",
+          "enum": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE"
+          ]
+        },
+        "path": {
+          "type": "string",
+          "description": "Suggested receiving endpoint path. Informational, not prescriptive."
+        },
+        "description": {
+          "type": "string"
+        },
+        "triggers": {
+          "type": "array",
+          "description": "Lines prefixed with '!' describing the conditions that fire the webhook.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "payload": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/field"
+          }
+        }
+      },
+      "name": "webhook"
+    },
+    "errorDefinition": {
+      "type": "object",
+      "required": [
+        "code",
+        "name"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "type": "int32",
+          "minimum": 100,
+          "maximum": 599
+        },
+        "name": {
+          "type": "string",
+          "description": "snake_case identifier following the HTTP code."
+        },
+        "description": {
+          "type": "string"
+        },
+        "ops": {
+          "type": "array",
+          "description": "Operations this error is scoped to via '@ops:op1,op2'. Empty/absent means global.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "fields": {
+          "type": "array",
+          "description": "Lines prefixed with '~' describing additional error body fields.",
+          "items": {
+            "$ref": "#/$defs/field"
+          }
+        }
+      },
+      "name": "errorDefinition"
+    },
+    "limits": {
+      "type": "object",
+      "description": "Optional [limits] section: rate limiting, quotas, and size caps.",
+      "additionalProperties": false,
+      "properties": {
+        "headers": {
+          "type": "array",
+          "description": "Rate limit headers exposed by the API (e.g., X-RateLimit-Limit).",
+          "items": {
+            "type": "string"
+          }
+        },
+        "onExceed": {
+          "type": "string",
+          "description": "Behavior when limits are exceeded (e.g., '429 retry_after')."
+        },
+        "maxBody": {
+          "type": "string",
+          "description": "e.g., '5MB'"
+        },
+        "maxUpload": {
+          "type": "string"
+        },
+        "maxResponse": {
+          "type": "string"
+        },
+        "maxBatch": {
+          "type": "int32"
+        },
+        "rate": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/rateLimit"
+          }
+        },
+        "quota": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/quota"
+          }
+        },
+        "plans": {
+          "type": "array",
+          "description": "Tiered limit blocks declared with 'plan: <name>'.",
+          "items": {
+            "type": "object",
+            "required": [
+              "name"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "rate": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/rateLimit"
+                }
+              },
+              "quota": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/quota"
+                }
+              },
+              "maxBody": {
+                "type": "string"
+              },
+              "maxUpload": {
+                "type": "string"
+              },
+              "maxResponse": {
+                "type": "string"
+              },
+              "maxBatch": {
+                "type": "int32"
+              }
+            }
+          }
+        }
+      },
+      "name": "limits"
+    },
+    "rateLimit": {
+      "type": "object",
+      "required": [
+        "count",
+        "window"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "count": {
+          "type": "int32",
+          "minimum": 1
+        },
+        "window": {
+          "type": "string",
+          "enum": [
+            "s",
+            "m",
+            "h",
+            "d"
+          ]
+        },
+        "scope": {
+          "type": "string",
+          "description": "@global, @key, @ip, @user, or @op:operation_name. Defaults to @key when omitted.",
+          "examples": [
+            "@global",
+            "@key",
+            "@ip",
+            "@user",
+            "@op:bulk_create_invoices"
+          ]
+        }
+      },
+      "name": "rateLimit"
+    },
+    "quota": {
+      "type": "object",
+      "required": [
+        "period"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "count": {
+          "oneOf": [
+            {
+              "type": "int32",
+              "minimum": 0
+            },
+            {
+              "type": "string",
+              "enum": [
+                "unlimited"
+              ]
+            }
+          ]
+        },
+        "period": {
+          "type": "string",
+          "enum": [
+            "d",
+            "w",
+            "mo",
+            "y"
+          ]
+        },
+        "scope": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        }
+      },
+      "name": "quota"
+    },
+    "flow": {
+      "type": "object",
+      "required": [
+        "name",
+        "chain"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string",
+          "description": "Quoted short description on the flow header line."
+        },
+        "chain": {
+          "type": "array",
+          "description": "Ordered list of flow steps separated by '->' in the source.",
+          "items": {
+            "$ref": "#/$defs/flowStep"
+          }
+        },
+        "conditions": {
+          "type": "array",
+          "description": "Lines prefixed with '?' explaining branch conditions.",
+          "items": {
+            "type": "object",
+            "required": [
+              "target",
+              "text"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "target": {
+                "type": "string",
+                "description": "Operation or branch name the condition applies to."
+              },
+              "text": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "description": {
+          "type": "string",
+          "description": "Free-text narrative description below the chain."
+        }
+      },
+      "name": "flow"
+    },
+    "flowStep": {
+      "oneOf": [
+        {
+          "name": "OperationStep",
+          "type": "object",
+          "required": [
+            "operation"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "operation": {
+              "type": "string"
+            },
+            "outputField": {
+              "type": "string",
+              "description": "Field projected from the operation output via '.field' notation."
+            },
+            "argument": {
+              "type": "string",
+              "description": "Argument bound on the next operation via '(field)' notation."
+            },
+            "loop": {
+              "type": "boolean",
+              "default": false,
+              "description": "True when annotated with trailing '*' indicating the step may repeat."
+            },
+            "branches": {
+              "type": "array",
+              "description": "Alternate operation steps separated by '|'.",
+              "items": {
+                "$ref": "#/$defs/flowStep"
+              }
+            }
+          }
+        },
+        {
+          "name": "WaitStep",
+          "type": "object",
+          "required": [
+            "wait"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "wait": {
+              "type": "string",
+              "description": "Annotation captured from '...(text)' in the chain."
+            }
+          }
+        }
+      ],
+      "name": "flowStep"
+    }
+  }
+}

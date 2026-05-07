@@ -1,0 +1,16 @@
+# LAPIS v0.1.0
+# [meta] section example - the single required metadata block.
+# See spec.en.md section 5.
+
+[meta]
+api: Invoice Service
+base: https://api.example.com/v2
+version: 2.1.0
+desc: Invoice, payment, and customer management
+auth: bearer header:Authorization
+format: json
+
+[ops]
+ping GET /ping
+  Liveness check.
+  < ok: bool

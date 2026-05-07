@@ -1,0 +1,36 @@
+# LAPIS v0.1.0
+# [types] section example - reusable type definitions.
+# Demonstrates enums, object types, optional fields, defaults, arrays,
+# maps, inline objects, @since version annotations, and @deprecated.
+# See spec.en.md section 6.
+
+[meta]
+api: Catalog Service
+base: https://api.example.com/v3
+version: 3.2.0
+
+[types]
+# Single-line enumeration
+Currency: EUR | USD | GBP
+
+# Object with required and optional fields, plus default value
+Address:
+  street: str
+  city: str
+  zip: str
+  country: str = "US"
+
+# Object using arrays, maps, references, versioning, and deprecation
+Product:
+  id: str
+  name: str
+  price: float
+  currency: Currency
+  tags: [str]
+  metadata?: {str:any} @since:3.1
+  legacy_sku?: str @deprecated "Use id instead"
+
+[ops]
+get_product GET /products/{product_id}
+  Returns a product by id.
+  < Product

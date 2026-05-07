@@ -1,0 +1,239 @@
+# LAPIS v0.1.0
+# Canonical Invoice Service example from spec.en.md section 13.
+# Demonstrates all seven sections: meta, types, ops, webhooks, errors, limits, flows.
+
+[meta]
+api: Invoice Service
+base: https://api.example.com/v2
+version: 2.2.0
+desc: Invoice, customer, and payment management
+auth: bearer header:Authorization
+
+[types]
+InvoiceStatus: draft | sent | paid | overdue | cancelled
+Currency: EUR | USD | GBP
+PaymentMethod: card | transfer | direct_debit
+
+ApiError:
+  code: str
+  message: str
+  request_id: str
+  details?: any
+
+Address:
+  street: str
+  city: str
+  zip: str
+  country: str = "US"
+
+InvoiceLine:
+  product_id: str
+  description?: str
+  quantity: int
+  unit_price: float
+
+Invoice:
+  id: str
+  customer_id: str
+  status: InvoiceStatus
+  currency: Currency
+  lines: [InvoiceLine]
+  billing_address: Address
+  subtotal: float
+  tax: float
+  total: float
+  created_at: datetime
+  due_date?: date
+  paid_at?: datetime
+  metadata?: {str:any} @since:2.1
+  refund_policy?: str @since:2.2 @deprecated "Moved to Customer"
+
+Customer:
+  id: str
+  name: str
+  email: str
+  company?: str
+  address?: Address
+  refund_policy?: str @since:2.2
+
+[ops]
+create_invoice POST /invoices
+  Creates an invoice for a customer.
+  > customer_id: str
+  > currency?: Currency
+  > lines: [InvoiceLine]
+  > billing_address?: Address
+  > due_date?: date
+  > notes?: str
+  < Invoice
+
+get_invoice GET /invoices/{invoice_id}
+  Full invoice details.
+  < Invoice
+
+list_invoices GET /invoices +paginated
+  Lists invoices with filters.
+  > customer_id?: str
+  > status?: InvoiceStatus
+  > from_date?: date
+  > to_date?: date
+  > min_total?: float
+  < [Invoice]
+
+update_invoice PATCH /invoices/{invoice_id}
+  Updates an invoice. Only in draft status.
+  > status?: InvoiceStatus
+  > due_date?: date
+  > notes?: str
+  > lines?: [InvoiceLine]
+  < Invoice
+
+delete_invoice DELETE /invoices/{invoice_id}
+  Deletes an invoice. Only in draft status.
+
+send_invoice POST /invoices/{invoice_id}/send +idempotent
+  Sends the invoice to the customer via email.
+  > email_to?: str
+  > cc?: [str]
+  < sent_at: datetime
+  < status: InvoiceStatus
+
+bulk_create_invoices POST /invoices/bulk @since:2.1
+  Creates multiple invoices in a single call.
+  > invoices: [{customer_id: str, lines: [InvoiceLine], due_date?: date}]
+  < [Invoice]
+
+export_invoices GET /invoices/export +stream +deprecated "Use /invoices with Accept: text/csv"
+  Exports invoices as CSV via streaming.
+  > status?: InvoiceStatus
+  > from_date?: date
+  < file
+
+get_customer GET /customers/{customer_id}
+  Customer details.
+  < Customer
+
+list_customers GET /customers +paginated
+  Lists customers.
+  > search?: str
+  > sort?: str = "name"
+  < [Customer]
+
+create_customer POST /customers
+  Creates a new customer.
+  > name: str
+  > email: str
+  > company?: str
+  > address?: Address
+  < Customer
+
+[webhooks]
+invoice_paid -> POST /webhooks/invoice-paid
+  Notifies when an invoice is paid.
+  ! When invoice.status changes to "paid".
+  < event_id: str @header:X-Event-ID
+  < signature: str @header:X-Webhook-Signature
+  < invoice_id: str
+  < customer_id: str
+  < amount: float
+  < currency: Currency
+  < paid_at: datetime
+  < payment_method: PaymentMethod
+
+invoice_overdue -> POST /webhooks/invoice-overdue
+  Notifies when an invoice becomes past due.
+  ! When due_date passes and status != "paid".
+  < event_id: str @header:X-Event-ID
+  < invoice_id: str
+  < customer_id: str
+  < amount_due: float
+  < days_overdue: int
+
+payment_failed -> POST /webhooks/payment-failed
+  Notifies when an automatic charge fails.
+  ! When a charge is declined by the processor.
+  < event_id: str @header:X-Event-ID
+  < invoice_id: str
+  < attempt_number: int
+  < failure_reason: str
+  < next_retry_at?: datetime
+
+[errors]
+# Base structure for all errors: ApiError
+
+400 validation_error
+  Invalid input data.
+
+401 unauthorized
+  Token is missing, expired, or invalid.
+
+403 forbidden
+  Valid token but insufficient permissions.
+
+404 not_found
+  Resource not found.
+
+409 invoice_already_sent @ops:send_invoice
+  The invoice has already been sent.
+
+409 duplicate_customer @ops:create_customer
+  A customer with that email already exists.
+  ~ existing_customer_id: str
+
+422 invalid_state_transition @ops:update_invoice,send_invoice
+  State transition not allowed.
+  ~ current_status: InvoiceStatus
+  ~ attempted_status: InvoiceStatus
+  ~ allowed_transitions: [InvoiceStatus]
+
+429 rate_limited
+  Rate limit exceeded.
+  ~ retry_after: int
+
+503 service_unavailable
+  Service temporarily unavailable.
+  ~ estimated_recovery: datetime?
+
+[limits]
+headers: X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset
+on_exceed: 429 retry_after
+max_body: 5MB
+max_upload: 25MB
+
+plan: free
+  rate: 60/m @key
+  rate: 10/m @op:bulk_create_invoices
+  quota: 1000/mo @key "monthly requests"
+  max_batch: 10
+
+plan: pro
+  rate: 600/m @key
+  rate: 60/m @op:bulk_create_invoices
+  quota: 50000/mo @key "monthly requests"
+  max_batch: 100
+
+plan: enterprise
+  rate: 6000/m @key
+  quota: unlimited
+  max_batch: 1000
+
+[flows]
+onboard_customer "Customer onboarding and first invoice"
+  create_customer.id -> create_invoice(customer_id) -> send_invoice
+  Creates customer, generates their first invoice, and sends it via email.
+
+invoice_lifecycle "Invoice lifecycle"
+  create_invoice -> update_invoice* -> send_invoice -> ...(awaiting payment) -> invoice_paid | invoice_overdue
+  ? invoice_paid: the customer pays before the due date
+  ? invoice_overdue: becomes past due without payment
+  Invoice is created as draft, edited, sent, and left pending payment.
+
+retry_failed_payment "Charge retries"
+  payment_failed -> ...(awaiting next_retry_at) -> send_invoice -> payment_failed | invoice_paid
+  ? payment_failed: retry fails (max 3)
+  ? invoice_paid: retry succeeds
+  Automatic retry after a failed charge.
+
+bulk_import "Bulk import"
+  list_customers -> bulk_create_invoices* -> list_invoices
+  Retrieves customers, creates invoices in batches, verifies results.

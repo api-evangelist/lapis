@@ -1,0 +1,46 @@
+# LAPIS v0.1.0
+# [limits] section example - rate limits, quotas, size caps, and plan tiers.
+# Demonstrates rate windows (s/m/h/d), quota periods (d/w/mo/y), scopes
+# (@key, @global, @ip, @user, @op:name), size limits, exceeded behavior,
+# rate-limit response headers, and plan-tier blocks.
+# See spec.en.md section 10.
+
+[meta]
+api: Invoice Service
+base: https://api.example.com/v2
+version: 2.2.0
+
+[ops]
+create_invoice POST /invoices
+  > customer_id: str
+  < id: str
+
+bulk_create_invoices POST /invoices/bulk
+  > invoices: [{customer_id: str}]
+  < ids: [str]
+
+[limits]
+headers: X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset
+on_exceed: 429 retry_after
+max_body: 5MB
+max_upload: 25MB
+
+plan: free
+  rate: 60/m @key
+  rate: 10/m @op:bulk_create_invoices
+  quota: 1000/mo @key "monthly requests"
+  quota: 100/mo @key "invoices created"
+  max_batch: 10
+
+plan: pro
+  rate: 600/m @key
+  rate: 60/m @op:bulk_create_invoices
+  quota: 50000/mo @key "monthly requests"
+  quota: 10000/mo @key "invoices created"
+  max_batch: 100
+
+plan: enterprise
+  rate: 6000/m @key
+  rate: 300/m @op:bulk_create_invoices
+  quota: unlimited
+  max_batch: 1000

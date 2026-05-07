@@ -1,0 +1,67 @@
+# LAPIS v0.1.0
+# [errors] section example - centralized error catalog.
+# Demonstrates HTTP code + snake_case identifier, the ~ field marker
+# for additional error body fields, and the @ops:name1,name2 binding
+# for operation-scoped errors.
+# See spec.en.md section 9.
+
+[meta]
+api: Invoice Service
+base: https://api.example.com/v2
+version: 2.2.0
+
+[types]
+ApiError:
+  code: str
+  message: str
+  request_id: str
+  details?: any
+
+InvoiceStatus: draft | sent | paid | overdue | cancelled
+
+[ops]
+update_invoice PATCH /invoices/{invoice_id}
+  > status?: InvoiceStatus
+
+send_invoice POST /invoices/{invoice_id}/send
+  > email_to?: str
+
+create_customer POST /customers
+  > name: str
+  > email: str
+
+[errors]
+# Base structure for all errors: ApiError
+
+400 validation_error
+  Invalid input data. details contains the fields with errors.
+
+401 unauthorized
+  Token is missing, expired, or invalid.
+
+403 forbidden
+  Valid token but insufficient permissions for this operation.
+
+404 not_found
+  Resource not found.
+
+409 invoice_already_sent @ops:send_invoice
+  The invoice has already been sent. It cannot be resent.
+
+409 duplicate_customer @ops:create_customer
+  A customer with that email already exists.
+  ~ existing_customer_id: str
+
+422 invalid_state_transition @ops:update_invoice,send_invoice
+  State transition not allowed (e.g., from paid to draft).
+  ~ current_status: InvoiceStatus
+  ~ attempted_status: InvoiceStatus
+  ~ allowed_transitions: [InvoiceStatus]
+
+429 rate_limited
+  Rate limit exceeded. Retry after the Retry-After header.
+  ~ retry_after: int
+
+503 service_unavailable
+  Service temporarily unavailable.
+  ~ estimated_recovery: datetime?

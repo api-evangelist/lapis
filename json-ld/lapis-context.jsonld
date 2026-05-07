@@ -1,0 +1,299 @@
+{
+  "@context": {
+    "@version": 1.1,
+    "lapis": "https://raw.githubusercontent.com/api-evangelist/lapis/refs/heads/main/json-ld/lapis-context.jsonld#",
+    "schema": "https://schema.org/",
+    "dcterms": "http://purl.org/dc/terms/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#",
+    "owl": "http://www.w3.org/2002/07/owl#",
+    "rdfs": "http://www.w3.org/2000/01/rdf-schema#",
+
+    "LapisDocument": "lapis:LapisDocument",
+    "MetaSection": "lapis:MetaSection",
+    "TypesSection": "lapis:TypesSection",
+    "OpsSection": "lapis:OpsSection",
+    "WebhooksSection": "lapis:WebhooksSection",
+    "ErrorsSection": "lapis:ErrorsSection",
+    "LimitsSection": "lapis:LimitsSection",
+    "FlowsSection": "lapis:FlowsSection",
+    "Operation": "lapis:Operation",
+    "Webhook": "lapis:Webhook",
+    "ErrorDefinition": "lapis:ErrorDefinition",
+    "TypeDefinition": "lapis:TypeDefinition",
+    "EnumDefinition": "lapis:EnumDefinition",
+    "ObjectDefinition": "lapis:ObjectDefinition",
+    "Field": "lapis:Field",
+    "Flow": "lapis:Flow",
+    "FlowStep": "lapis:FlowStep",
+    "RateLimit": "lapis:RateLimit",
+    "Quota": "lapis:Quota",
+    "Plan": "lapis:Plan",
+    "Authentication": "lapis:Authentication",
+    "OperationModifier": "lapis:OperationModifier",
+
+    "lapisVersion": {
+      "@id": "schema:version",
+      "@type": "xsd:string"
+    },
+    "api": {
+      "@id": "schema:name",
+      "@type": "xsd:string"
+    },
+    "name": {
+      "@id": "schema:name",
+      "@type": "xsd:string"
+    },
+    "description": {
+      "@id": "schema:description",
+      "@type": "xsd:string"
+    },
+    "desc": {
+      "@id": "schema:description",
+      "@type": "xsd:string"
+    },
+    "summary": {
+      "@id": "schema:abstract",
+      "@type": "xsd:string"
+    },
+    "base": {
+      "@id": "lapis:base",
+      "@type": "@id"
+    },
+    "version": {
+      "@id": "schema:version",
+      "@type": "xsd:string"
+    },
+    "format": {
+      "@id": "lapis:format",
+      "@type": "xsd:string"
+    },
+    "auth": {
+      "@id": "lapis:auth",
+      "@type": "@id"
+    },
+    "type": {
+      "@id": "lapis:type",
+      "@type": "xsd:string"
+    },
+    "location": {
+      "@id": "lapis:location",
+      "@type": "xsd:string"
+    },
+    "tokenUrl": {
+      "@id": "lapis:tokenUrl",
+      "@type": "@id"
+    },
+    "method": {
+      "@id": "lapis:httpMethod",
+      "@type": "xsd:string"
+    },
+    "path": {
+      "@id": "lapis:path",
+      "@type": "xsd:string"
+    },
+    "code": {
+      "@id": "schema:statusCode",
+      "@type": "xsd:integer"
+    },
+    "ops": {
+      "@id": "lapis:operations",
+      "@container": "@set",
+      "@type": "@id"
+    },
+    "webhooks": {
+      "@id": "lapis:webhooks",
+      "@container": "@set",
+      "@type": "@id"
+    },
+    "errors": {
+      "@id": "lapis:errors",
+      "@container": "@set",
+      "@type": "@id"
+    },
+    "limits": {
+      "@id": "lapis:limits",
+      "@type": "@id"
+    },
+    "flows": {
+      "@id": "lapis:flows",
+      "@container": "@set",
+      "@type": "@id"
+    },
+    "types": {
+      "@id": "lapis:types",
+      "@type": "@id"
+    },
+    "meta": {
+      "@id": "lapis:meta",
+      "@type": "@id"
+    },
+    "fields": {
+      "@id": "lapis:fields",
+      "@container": "@set",
+      "@type": "@id"
+    },
+    "inputs": {
+      "@id": "lapis:inputs",
+      "@container": "@set",
+      "@type": "@id"
+    },
+    "outputs": {
+      "@id": "lapis:outputs",
+      "@container": "@set",
+      "@type": "@id"
+    },
+    "payload": {
+      "@id": "lapis:payload",
+      "@container": "@set",
+      "@type": "@id"
+    },
+    "triggers": {
+      "@id": "lapis:triggers",
+      "@container": "@set",
+      "@type": "xsd:string"
+    },
+    "modifiers": {
+      "@id": "lapis:modifiers",
+      "@container": "@set",
+      "@type": "@id"
+    },
+    "values": {
+      "@id": "lapis:enumValues",
+      "@container": "@list",
+      "@type": "xsd:string"
+    },
+    "kind": {
+      "@id": "lapis:kind",
+      "@type": "xsd:string"
+    },
+    "optional": {
+      "@id": "lapis:optional",
+      "@type": "xsd:boolean"
+    },
+    "default": {
+      "@id": "lapis:default"
+    },
+    "since": {
+      "@id": "lapis:since",
+      "@type": "xsd:string"
+    },
+    "deprecated": {
+      "@id": "lapis:deprecated"
+    },
+    "headerName": {
+      "@id": "lapis:headerName",
+      "@type": "xsd:string"
+    },
+    "typeRef": {
+      "@id": "lapis:typeRef",
+      "@type": "xsd:string"
+    },
+    "ops_scope": {
+      "@id": "lapis:scopedOps",
+      "@container": "@set",
+      "@type": "xsd:string"
+    },
+    "headers": {
+      "@id": "lapis:headers",
+      "@container": "@set",
+      "@type": "xsd:string"
+    },
+    "onExceed": {
+      "@id": "lapis:onExceed",
+      "@type": "xsd:string"
+    },
+    "maxBody": {
+      "@id": "lapis:maxBody",
+      "@type": "xsd:string"
+    },
+    "maxUpload": {
+      "@id": "lapis:maxUpload",
+      "@type": "xsd:string"
+    },
+    "maxResponse": {
+      "@id": "lapis:maxResponse",
+      "@type": "xsd:string"
+    },
+    "maxBatch": {
+      "@id": "lapis:maxBatch",
+      "@type": "xsd:integer"
+    },
+    "rate": {
+      "@id": "lapis:rate",
+      "@container": "@set",
+      "@type": "@id"
+    },
+    "quota": {
+      "@id": "lapis:quota",
+      "@container": "@set",
+      "@type": "@id"
+    },
+    "plans": {
+      "@id": "lapis:plans",
+      "@container": "@set",
+      "@type": "@id"
+    },
+    "count": {
+      "@id": "lapis:count"
+    },
+    "window": {
+      "@id": "lapis:window",
+      "@type": "xsd:string"
+    },
+    "period": {
+      "@id": "lapis:period",
+      "@type": "xsd:string"
+    },
+    "scope": {
+      "@id": "lapis:scope",
+      "@type": "xsd:string"
+    },
+    "chain": {
+      "@id": "lapis:chain",
+      "@container": "@list",
+      "@type": "@id"
+    },
+    "conditions": {
+      "@id": "lapis:conditions",
+      "@container": "@set",
+      "@type": "@id"
+    },
+    "operation": {
+      "@id": "lapis:operation",
+      "@type": "xsd:string"
+    },
+    "outputField": {
+      "@id": "lapis:outputField",
+      "@type": "xsd:string"
+    },
+    "argument": {
+      "@id": "lapis:argument",
+      "@type": "xsd:string"
+    },
+    "loop": {
+      "@id": "lapis:loop",
+      "@type": "xsd:boolean"
+    },
+    "branches": {
+      "@id": "lapis:branches",
+      "@container": "@set",
+      "@type": "@id"
+    },
+    "wait": {
+      "@id": "lapis:wait",
+      "@type": "xsd:string"
+    },
+    "target": {
+      "@id": "lapis:target",
+      "@type": "xsd:string"
+    },
+    "text": {
+      "@id": "schema:text",
+      "@type": "xsd:string"
+    },
+    "note": {
+      "@id": "lapis:note",
+      "@type": "xsd:string"
+    }
+  }
+}

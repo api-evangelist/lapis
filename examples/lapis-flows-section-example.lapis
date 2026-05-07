@@ -1,0 +1,76 @@
+# LAPIS v0.1.0
+# [flows] section example - multi-step workflow descriptions.
+# Demonstrates chain arrows (->), branches (|), loops (*), waits (...()),
+# inter-step data flow notation (.field -> next(field)), and
+# branch-condition lines prefixed with ?.
+# See spec.en.md section 11.
+
+[meta]
+api: Invoice Service
+base: https://api.example.com/v2
+version: 2.2.0
+
+[ops]
+create_customer POST /customers
+  > name: str
+  > email: str
+  < id: str
+
+create_invoice POST /invoices
+  > customer_id: str
+  < id: str
+
+update_invoice PATCH /invoices/{invoice_id}
+  > status?: str
+
+send_invoice POST /invoices/{invoice_id}/send
+  < sent_at: datetime
+
+bulk_create_invoices POST /invoices/bulk
+  > invoices: [{customer_id: str}]
+  < ids: [str]
+
+list_customers GET /customers
+  < ids: [str]
+
+list_invoices GET /invoices
+  < ids: [str]
+
+[webhooks]
+invoice_paid -> POST /webhooks/invoice-paid
+  ! When invoice.status changes to "paid".
+  < invoice_id: str
+
+invoice_overdue -> POST /webhooks/invoice-overdue
+  ! When due_date passes and status != "paid".
+  < invoice_id: str
+
+payment_failed -> POST /webhooks/payment-failed
+  ! When an automatic charge fails.
+  < invoice_id: str
+  < next_retry_at: datetime
+
+[flows]
+onboard_customer "Customer onboarding and first invoice"
+  create_customer.id -> create_invoice(customer_id) -> send_invoice
+  Typical onboarding flow: create the customer, generate their first
+  invoice, and send it via email automatically.
+
+invoice_lifecycle "Full invoice lifecycle"
+  create_invoice -> update_invoice* -> send_invoice -> ...(awaiting payment) -> invoice_paid | invoice_overdue
+  ? invoice_paid: the customer pays before the due date
+  ? invoice_overdue: the due date passes without payment
+  Invoice is created as draft, may be edited multiple times, sent to
+  the customer, and left pending payment.
+
+retry_failed_payment "Failed charge retries"
+  payment_failed -> ...(awaiting next_retry_at) -> send_invoice -> payment_failed | invoice_paid
+  ? payment_failed: the retry fails again (max 3 attempts)
+  ? invoice_paid: the retry succeeds
+  When an automatic charge fails, wait for the time indicated in the
+  webhook and retry.
+
+bulk_import "Bulk invoice import"
+  list_customers -> bulk_create_invoices* -> list_invoices
+  Retrieve existing customer IDs, create invoices in batches using the
+  bulk endpoint, and verify the results.

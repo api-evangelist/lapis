@@ -1,0 +1,50 @@
+# LAPIS v0.1.0
+# [webhooks] section example - push events with trigger conditions.
+# Demonstrates the -> arrow, the ! trigger marker, and @header
+# annotations for signed/identifying headers.
+# See spec.en.md section 8.
+
+[meta]
+api: Invoice Service
+base: https://api.example.com/v2
+version: 2.2.0
+
+[types]
+Currency: EUR | USD | GBP
+
+[ops]
+create_invoice POST /invoices
+  Creates an invoice.
+  > customer_id: str
+  < id: str
+
+[webhooks]
+invoice_paid -> POST /webhooks/invoice-paid
+  Notifies when an invoice is marked as paid.
+  ! When invoice.status changes to "paid".
+  ! When a partial payment completes the outstanding balance.
+  < event_id: str @header:X-Event-ID
+  < signature: str @header:X-Webhook-Signature
+  < invoice_id: str
+  < customer_id: str
+  < amount: float
+  < currency: Currency
+  < paid_at: datetime
+  < payment_method: str
+
+invoice_overdue -> POST /webhooks/invoice-overdue
+  Notifies when an invoice becomes past due.
+  ! When due_date passes and status != "paid".
+  < event_id: str @header:X-Event-ID
+  < invoice_id: str
+  < amount_due: float
+  < days_overdue: int
+
+payment_failed -> POST /webhooks/payment-failed
+  Notifies when an automatic charge attempt fails.
+  ! When a charge is declined by the payment processor.
+  < event_id: str @header:X-Event-ID
+  < invoice_id: str
+  < attempt_number: int
+  < failure_reason: str
+  < next_retry_at?: datetime

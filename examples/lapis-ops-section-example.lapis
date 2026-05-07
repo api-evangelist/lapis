@@ -1,0 +1,73 @@
+# LAPIS v0.1.0
+# [ops] section example - the core API operations.
+# Demonstrates input markers (>), output markers (<), path/query/header
+# locations, modifiers (+paginated, +idempotent, +stream, +deprecated),
+# inline objects, default values, and @since version annotations.
+# See spec.en.md section 7.
+
+[meta]
+api: Invoice Service
+base: https://api.example.com/v2
+version: 2.2.0
+auth: bearer header:Authorization
+
+[types]
+InvoiceStatus: draft | sent | paid | overdue | cancelled
+
+InvoiceLine:
+  product_id: str
+  quantity: int
+  unit_price: float
+
+Invoice:
+  id: str
+  customer_id: str
+  status: InvoiceStatus
+  total: float
+  created_at: datetime
+
+[ops]
+create_invoice POST /invoices
+  Creates an invoice for a customer.
+  > customer_id: str
+  > lines: [InvoiceLine]
+  > due_date?: date
+  < Invoice
+
+get_invoice GET /invoices/{invoice_id}
+  Full invoice details.
+  < Invoice
+
+list_invoices GET /invoices +paginated
+  Lists invoices with filters.
+  > customer_id?: str
+  > status?: InvoiceStatus
+  > page?: int = 1
+  > per_page?: int = 20
+  < [Invoice]
+
+send_invoice POST /invoices/{invoice_id}/send +idempotent
+  Sends the invoice to the customer.
+  > idempotency_key: str @header
+  < sent_at: datetime
+  < status: InvoiceStatus
+
+bulk_create_invoices POST /invoices/bulk @since:2.1
+  Creates multiple invoices in one call.
+  > invoices: [{customer_id: str, lines: [InvoiceLine]}]
+  < [Invoice]
+
+stream_invoice_events GET /invoices/events +stream
+  Server-sent events for invoice state changes.
+  > since?: datetime @query
+  < event_id: str
+  < type: str
+  < invoice_id: str
+
+delete_invoice DELETE /invoices/{invoice_id}
+  Deletes a draft invoice.
+
+export_invoices GET /invoices/export +stream +deprecated "Use /invoices with Accept: text/csv"
+  Exports invoices as CSV via streaming.
+  > status?: InvoiceStatus
+  < file

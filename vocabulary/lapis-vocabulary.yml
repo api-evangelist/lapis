@@ -1,0 +1,358 @@
+vocabulary: "1.0.0"
+
+info:
+  provider: "LAPIS"
+  description: >-
+    Normative vocabulary of the LAPIS (Lightweight API Specification for
+    Intelligent Systems) v0.1.0 specification. This vocabulary enumerates
+    every reserved term defined by spec.en.md sections 4-19, including
+    section names, scalar types, type modifiers, operation modifiers,
+    annotations, IO/error/trigger markers, authentication types, rate-limit
+    windows, quota periods, scopes, size units, HTTP methods, flow operators,
+    and conformance levels. Because LAPIS is a specification rather than a
+    runtime API, the vocabulary surfaces the language's terms instead of
+    exposed resources or operations.
+  specVersion: "0.1.0"
+  status: "Draft"
+  license: "CC BY 4.0"
+  source: "https://github.com/cr0hn/LAPIS/blob/main/spec.en.md"
+  created: "2026-05-06"
+  modified: "2026-05-06"
+
+# SPECIFICATION DIMENSION (the LAPIS language)
+specification:
+  fileExtension: ".lapis"
+  mimeType: "text/lapis"
+  encoding: "UTF-8 without BOM"
+  versionLine: "# LAPIS vX.Y.Z"
+
+  sections:
+    - name: "[meta]"
+      required: true
+      order: 1
+      description: "API metadata in key:value form (api, base, version, desc, auth, format)."
+      keys:
+        required: ["api", "base"]
+        optional: ["version", "desc", "auth", "format"]
+    - name: "[types]"
+      required: false
+      order: 2
+      description: "Reusable type definitions referenced by operations, webhooks, and flows."
+    - name: "[ops]"
+      required: true
+      order: 3
+      description: "API operations - the core section. Each entry is one HTTP endpoint."
+    - name: "[webhooks]"
+      required: false
+      order: 4
+      description: "Push events the API sends to consumer endpoints, with trigger conditions."
+    - name: "[errors]"
+      required: false
+      order: 5
+      description: "Error catalog declared once and applied globally or scoped to specific operations."
+    - name: "[limits]"
+      required: false
+      order: 6
+      description: "Rate limits, quotas, size caps, and tiered plan blocks."
+    - name: "[flows]"
+      required: false
+      order: 7
+      description: "Multi-step workflow descriptions linking operations together."
+
+  scalarTypes:
+    - name: "str"
+      description: "Text string."
+    - name: "int"
+      description: "Integer number."
+    - name: "float"
+      description: "Decimal number."
+    - name: "bool"
+      description: "Boolean true or false."
+    - name: "date"
+      description: "ISO 8601 date (YYYY-MM-DD)."
+    - name: "datetime"
+      description: "ISO 8601 date and time."
+    - name: "file"
+      description: "Binary content."
+    - name: "any"
+      description: "Any type. Used when union semantics cannot be represented otherwise."
+
+  typeModifiers:
+    - syntax: "[T]"
+      name: "array"
+      description: "Array of T."
+    - syntax: "{str:T}"
+      name: "map"
+      description: "Map keyed by string with T values."
+    - syntax: "{field: T, field?: T}"
+      name: "inline_object"
+      description: "Inline anonymous object type used by a single operation."
+    - syntax: "T?"
+      name: "nullable"
+      description: "T or null."
+    - syntax: "T = value"
+      name: "default"
+      description: "Default value applied when the field is absent."
+
+  operationModifiers:
+    - name: "+paginated"
+      description: "Operation returns a paginated response and accepts standard pagination parameters."
+    - name: "+deprecated"
+      description: "Operation is deprecated. May be followed by a quoted note describing the replacement."
+    - name: "+idempotent"
+      description: "Operation is safe to retry; multiple identical calls produce the same result."
+    - name: "+stream"
+      description: "Response is a stream (SSE, chunked transfer, etc.)."
+
+  ioMarkers:
+    - prefix: ">"
+      name: "input"
+      description: "Operation input parameter (request body, query, header, or path)."
+    - prefix: "<"
+      name: "output"
+      description: "Operation or webhook output field (success response body)."
+    - prefix: "~"
+      name: "error_field"
+      description: "Additional error body field declared in [errors]."
+    - prefix: "!"
+      name: "trigger"
+      description: "Webhook trigger condition declared in [webhooks]."
+    - prefix: "?"
+      name: "condition"
+      description: "Branch condition declared inside [flows] beneath a chain with | branches."
+
+  annotations:
+    - name: "@since:X.Y"
+      target: "field, operation"
+      description: "API version in which the field or operation was introduced (partial semver)."
+    - name: "@deprecated"
+      target: "field, operation"
+      description: "Marks the field or operation as deprecated; optional quoted note describes the alternative."
+    - name: "@query"
+      target: "input field"
+      description: "Forces the parameter location to query string."
+    - name: "@header"
+      target: "input field, output field"
+      description: "Forces the parameter location to HTTP header. May be followed by ':Header-Name'."
+    - name: "@path"
+      target: "input field"
+      description: "Forces the parameter location to URL path. Inferable from path templates."
+    - name: "@body"
+      target: "input field"
+      description: "Forces the parameter location to request body."
+    - name: "@ops:name1,name2"
+      target: "error definition"
+      description: "Scopes the error to specific operations. Absent means global."
+    - name: "@header:Name"
+      target: "output field"
+      description: "Marks an output field as carried in the named HTTP header rather than the body."
+
+  authenticationTypes:
+    - name: "bearer"
+      example: "auth: bearer header:Authorization"
+    - name: "apikey"
+      example: "auth: apikey header:X-API-Key"
+    - name: "basic"
+      example: "auth: basic"
+    - name: "oauth2"
+      example: "auth: oauth2 https://auth.example.com/token"
+    - name: "none"
+      example: "auth: none"
+
+  authenticationLocations:
+    - name: "header"
+    - name: "query"
+
+  httpMethods:
+    - "GET"
+    - "POST"
+    - "PUT"
+    - "PATCH"
+    - "DELETE"
+
+  rateLimitWindows:
+    - code: "s"
+      description: "second"
+    - code: "m"
+      description: "minute"
+    - code: "h"
+      description: "hour"
+    - code: "d"
+      description: "day"
+
+  quotaPeriods:
+    - code: "d"
+      description: "day"
+    - code: "w"
+      description: "week"
+    - code: "mo"
+      description: "month"
+    - code: "y"
+      description: "year"
+
+  scopes:
+    - name: "@global"
+      description: "Limit applies API-wide, shared across all consumers."
+    - name: "@key"
+      description: "Per API key or token. Default scope when none is specified."
+    - name: "@ip"
+      description: "Per source IP address."
+    - name: "@user"
+      description: "Per authenticated user."
+    - name: "@op:operation_name"
+      description: "Limit applies only to the named operation."
+
+  limitDirectives:
+    - name: "rate"
+      syntax: "rate: <count>/<window> [scope]"
+      description: "Sliding-window request rate limit."
+    - name: "quota"
+      syntax: "quota: <count>/<period> [scope] \"description\""
+      description: "Cumulative quota over a billing period."
+    - name: "max_body"
+      description: "Maximum request body size."
+    - name: "max_upload"
+      description: "Maximum upload size."
+    - name: "max_response"
+      description: "Maximum response body size."
+    - name: "max_batch"
+      description: "Maximum number of items per batch operation."
+    - name: "headers"
+      description: "Comma-separated rate limit response headers exposed by the API."
+    - name: "on_exceed"
+      description: "Behavior when limits are exceeded (e.g., '429 retry_after')."
+    - name: "plan: <name>"
+      description: "Block of limits applying to a named pricing tier (e.g., free, pro, enterprise)."
+
+  sizeUnits:
+    - name: "KB"
+    - name: "MB"
+    - name: "GB"
+
+  flowOperators:
+    - syntax: "->"
+      name: "chain"
+      description: "Sequencing arrow between flow steps."
+    - syntax: "|"
+      name: "branch"
+      description: "Branch divider; downstream selection between alternatives."
+    - syntax: "*"
+      name: "loop"
+      description: "Step may execute multiple times before proceeding."
+    - syntax: "...(text)"
+      name: "wait"
+      description: "Pause for an external event (webhook, timer, user action)."
+    - syntax: ".field"
+      name: "projection"
+      description: "Project a field from the previous step's output."
+    - syntax: "(field)"
+      name: "binding"
+      description: "Bind a value into the next operation's named parameter."
+
+  comments:
+    syntax: "#"
+    description: "Lines or trailing tokens beginning with # are ignored by parsers."
+
+  conformance:
+    requiredSections: ["[meta]", "[ops]"]
+    requiredMetaKeys: ["api", "base"]
+    formalGrammar: "EBNF (simplified) in spec.en.md section 16."
+    conversionSource: "OpenAPI 3.0.x and 3.1.x (spec.en.md section 14)."
+
+  goals:
+    - name: "Token-minimal"
+      description: "Target 70-80 percent fewer tokens than equivalent OpenAPI YAML."
+    - name: "LLM-native"
+      description: "Designed around how LLMs process text, not for formal parsers."
+    - name: "Convertible"
+      description: "OpenAPI 3.x to LAPIS must be fully automatable."
+    - name: "Human-readable"
+      description: "A human should be able to read and write LAPIS without documentation."
+    - name: "No semantic loss"
+      description: "All information an LLM needs to reason about the API must be preserved."
+
+  nonGoals:
+    - "Not a runtime format (does not replace function calling or MCP)."
+    - "Not bidirectional (full OpenAPI cannot be reconstructed from LAPIS)."
+    - "Does not define transport, detailed authentication, or full OAuth flows."
+    - "Does not include extensive examples or detailed response headers."
+
+  discardedDuringConversion:
+    - "openapi version field"
+    - "info.contact"
+    - "info.license"
+    - "info.termsOfService"
+    - "externalDocs"
+    - "tags definitions"
+    - "paths.*.servers"
+    - "operation-level security"
+    - "callbacks"
+    - "discriminator"
+    - "xml"
+    - "example (replaced by structural defaults)"
+    - "all unrecognized x-* extensions"
+
+# TOOLING DIMENSION (the LAPIS ecosystem)
+tooling:
+  reference:
+    - name: "lapis-spec"
+      kind: "Python CLI / library"
+      url: "https://pypi.org/project/lapis-spec/"
+      version: "0.1.1"
+      license: "MIT"
+      requires: "Python >= 3.12"
+      capabilities:
+        - "OpenAPI 3.0.x and 3.1.x ingest (JSON or YAML)"
+        - "Full $ref resolution including circular references"
+        - "allOf / oneOf / anyOf flattening"
+        - "Inline-versus-named type deduplication"
+        - "Security scheme interpretation (bearer, apikey, basic, oauth2)"
+        - "Operation modifier detection (+deprecated, +paginated, +idempotent, +stream)"
+        - "Error response collection and deduplication"
+        - "All seven LAPIS sections emitted"
+    - name: "LAPIS Online Converter"
+      kind: "Web SPA"
+      url: "https://cr0hn.github.io/LAPIS/"
+      capabilities:
+        - "Browser-based OpenAPI to LAPIS conversion"
+        - "Drag-and-drop file upload (.json, .yaml, .yml)"
+        - "Paste input directly"
+        - "Copy or download the .lapis result"
+    - name: "LAPIS Language (VS Code extension)"
+      kind: "IDE extension"
+      url: "https://github.com/cr0hn/LAPIS/tree/main/tools/ides/vscode"
+      identifier: "lapis-spec.lapis-lang"
+      version: "0.1.0"
+      license: "CC BY 4.0"
+      capabilities:
+        - "Syntax highlighting for all seven sections"
+        - "Scalar type, modifier, and annotation highlighting"
+        - "Bracket matching and auto-closing pairs"
+        - "Section folding"
+
+# CROSS-REFERENCE: which spec terms are exercised by which canonical example
+crossReference:
+  - example: "examples/lapis-meta-section-example.lapis"
+    sections: ["[meta]", "[ops]"]
+    terms: ["api", "base", "version", "desc", "auth", "format", "bearer", "header"]
+  - example: "examples/lapis-types-section-example.lapis"
+    sections: ["[meta]", "[types]", "[ops]"]
+    terms: ["enum", "object", "[T]", "{str:T}", "T?", "T = value", "@since:X.Y", "@deprecated"]
+  - example: "examples/lapis-ops-section-example.lapis"
+    sections: ["[meta]", "[types]", "[ops]"]
+    terms: [">", "<", "@query", "@header", "@path", "+paginated", "+idempotent", "+stream", "+deprecated", "@since:X.Y", "GET", "POST", "PATCH", "DELETE"]
+  - example: "examples/lapis-webhooks-section-example.lapis"
+    sections: ["[meta]", "[types]", "[ops]", "[webhooks]"]
+    terms: ["->", "!", "<", "@header:Name"]
+  - example: "examples/lapis-errors-section-example.lapis"
+    sections: ["[meta]", "[types]", "[ops]", "[errors]"]
+    terms: ["~", "@ops:", "HTTP_CODE", "global error", "operation-scoped error"]
+  - example: "examples/lapis-limits-section-example.lapis"
+    sections: ["[meta]", "[ops]", "[limits]"]
+    terms: ["rate:", "quota:", "max_body", "max_upload", "max_batch", "headers:", "on_exceed:", "plan:", "@key", "@op:", "/m", "/mo", "MB"]
+  - example: "examples/lapis-flows-section-example.lapis"
+    sections: ["[meta]", "[ops]", "[webhooks]", "[flows]"]
+    terms: ["->", "|", "*", "...(text)", ".field", "(field)", "?"]
+  - example: "examples/lapis-invoice-service-example.lapis"
+    sections: ["[meta]", "[types]", "[ops]", "[webhooks]", "[errors]", "[limits]", "[flows]"]
+    terms: ["all"]
