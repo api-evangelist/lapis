@@ -114,7 +114,7 @@ common:
   - type: CLI
     url: https://pypi.org/project/lapis-spec/
     title: lapis CLI (lapis-spec on PyPI)
-  - type: SDK
+  - type: SDKs
     url: https://pypi.org/project/lapis-spec/
     title: lapis-spec Python Package
   - type: IDESupport
