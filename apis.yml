@@ -27,6 +27,13 @@ accessModel:
   method: derived
 image: https://kinlane-images.s3.amazonaws.com/shared/apis-json/icons/lapis.png
 tags:
+  - Specification
+  - LLM
+  - AI Agents
+  - OpenAPI
+  - Token Optimization
+  - Standards
+tags_raw:
   - API
   - Specification
   - LLM
