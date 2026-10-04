@@ -16,6 +16,10 @@ description: >-
 type: Index
 deliveryModel:
   model: unknown
+  license_evidence:
+    repo: cr0hn/lapis
+    spdx: NOASSERTION
+    stars: 16
   open_source: unknown
   commercial: true
   callable_host: false
@@ -24,7 +28,7 @@ deliveryModel:
   source:
   - pricing
   - repository-unlicensed
-  generated: '2026-08-28'
+  generated: '2026-09-25'
   method: derived
 accessModel:
   pricing: unknown
@@ -380,3 +384,4 @@ common:
 maintainers:
   - FN: Kin Lane
     email: kin@apievangelist.com
+kind: topic
